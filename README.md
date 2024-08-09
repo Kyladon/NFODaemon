@@ -28,8 +28,8 @@ This daemon provides a secure way to privately share NFO files with trusted grou
     "filename": "<original_filename>", **REQUIRED**
     "save": true, **REQUIRED**
     "date": "<UTC_formatted_date>",
-    "files": <number_of_files>,
-    "size": <total_size_mb>
+    "files": "<number_of_files>",
+    "size": "<total_size_mb>"
 }
 ```
 * Required fields are marked with `REQUIRED` and must be included in the request.
