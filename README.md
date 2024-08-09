@@ -26,7 +26,7 @@ This daemon provides a secure way to privately share NFO files with trusted grou
     "nfo_data": "<base64_encoded_data>", **REQUIRED**
     "release": "<release_name>", **REQUIRED**
     "filename": "<original_filename>", **REQUIRED**
-    "save": <boolean>, **REQUIRED**
+    "save": "<boolean>", **REQUIRED**
     "date": "<UTC_formatted_date>",
     "files": "<number_of_files>",
     "size": "<total_size_mb>"
@@ -34,6 +34,14 @@ This daemon provides a secure way to privately share NFO files with trusted grou
 ```
 * Required fields are marked with `REQUIRED` and must be included in the request.
 * Optional fields can be omitted if not applicable.
+
+nfo_data [REQUIRED] - STRING entire blob base64 encoded
+release [REQUIRED] - STRING release name
+filename [REQUIRED] - STRING NFO original filename
+save [REQUIRED] - BOOL true or false, to allow the user to download the original NFO or not.
+date [OPTIONAL] - STRING Format this however you like as there is no datetime conversion done server side. Suggest sending UTC formatted date like "2005-05-28 17:58:07"
+files [OPTIONAL] - INT Total number of files in release
+size [OPTIONAL] - FLOAT size of release in mb's
 
 ### Response Format
 
