@@ -14,7 +14,7 @@ By default, NFO's are only viewable up to 5 minutes after submission. The daemon
 
 **REQUIREMENTS**
 -------------------
-* Python 3.6 or later\
+* Python 3.6 or later
 * Lets Encrypt certificate (See [Getting Started](#getting-started))
 
 **Important Notes**
