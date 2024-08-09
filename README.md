@@ -5,7 +5,8 @@
 **Overview**
 
 This daemon provides a lightweight way to privately share NFO files with trusted groups via HTTPS. It's intended to be used in isolation from databases and other services.\
-The daemon will render the NFO text to PNG using a CP437 font, thus preserving the artistical aspects of the document. It can optionally allow users accessing the NFO to download, if permitted.
+The daemon will render the NFO text to PNG using a CP437 font, thus preserving the artistical aspects of the document. It can optionally allow users accessing the NFO to download, if permitted.\
+By default, NFO's are only viewable up to 5 minutes after submission. The daemon then removes all associated files related to the submission.
 
 **REQUIREMENTS**
 -------------------
