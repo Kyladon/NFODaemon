@@ -9,7 +9,7 @@ This daemon provides a lightweight way to privately share NFO files with trusted
 **REQUIREMENTS**
 -------------------
 Python 3.6 or later\
-Lets Encrypt certificate (See [Getting Started])
+Lets Encrypt certificate (See [Getting Started](#getting-started))
 
 **Important Notes**
 
