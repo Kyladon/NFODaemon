@@ -47,7 +47,7 @@ This daemon provides a secure way to privately share NFO files with trusted grou
 
 ### Response Format
 
-The daemon will respond with a standard HTTP status code. Successful responses will include a JSON object with two values:
+The daemon will respond with a standard HTTP status code. A successful 200 response will include a JSON object with two values:
 
 ```json
 {
