@@ -23,10 +23,10 @@ This daemon provides a secure way to privately share NFO files with trusted grou
 * The request body should contain the following JSON data:
 ```json
 {
-    "nfo_data": "<base64_encoded_data>",
-    "release": "<release_name>",
-    "filename": "<original_filename>",
-    "save": true,
+    "nfo_data": "<base64_encoded_data>", **REQUIRED**
+    "release": "<release_name>", **REQUIRED**
+    "filename": "<original_filename>", **REQUIRED**
+    "save": true, **REQUIRED**
     "date": "<UTC_formatted_date>",
     "files": <number_of_files>,
     "size": <total_size_mb>
