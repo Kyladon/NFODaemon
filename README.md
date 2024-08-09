@@ -36,7 +36,7 @@ This daemon provides a secure way to privately share NFO files with trusted grou
 * Optional fields can be omitted if not applicable.
 
 | Field       | Type     | Description                                                            |
-| :---------- | :------: | ---------------------------------------------------------------------: |
+| :---------- | :------: | :--------------------------------------------------------------------: |
 |**nfo_data** | STRING   | entire blob base64 encoded.                                            |
 |**release**  | STRING   | release name.                                                          |
 |**filename** | STRING   | NFO original filename.                                                 |
