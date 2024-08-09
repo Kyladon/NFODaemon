@@ -1,3 +1,4 @@
+
 **SPRE NFO Daemon**
 =====================================
 
@@ -14,7 +15,9 @@ This daemon provides a secure way to privately share NFO files with trusted grou
 -------------------
 
 1. Configure global variables in `main.py` according to the comments provided.
-2. To send an NFO file to the daemon, follow these steps:
+2. Configure Certbot standalone to obtain the required pem files to operate as HTTPS. For more info on this see here: https://eff-certbot.readthedocs.io/en/stable/using.html#standalone 
+Once done you should copy the files to a location accessable by this daemon and update the le_ variables in `main.py` 
+4. To send an NFO file to the daemon, follow these steps:
 
 ### Sending an NFO File
 
