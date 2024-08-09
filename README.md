@@ -7,6 +7,7 @@
 This daemon provides a secure way to privately share NFO files with trusted groups. It's intended to be used in isolation from databases and other services.
 
 **REQUIREMENTS**
+-------------------
 Python 3.6 or later
 
 **Important Notes**
