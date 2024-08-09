@@ -35,13 +35,13 @@ This daemon provides a secure way to privately share NFO files with trusted grou
 * Required fields are marked with `REQUIRED` and must be included in the request.
 * Optional fields can be omitted if not applicable.
 
-nfo_data - STRING entire blob base64 encoded.
-release - STRING release name.
-filename - STRING NFO original filename.
-save - BOOL true or false, to allow the user to download the original NFO or not.
-date - STRING Format this however you like as there is no datetime conversion done server side. Suggest sending UTC formatted date like 2005-05-28 17:58:07.
-files - INT Total number of files in release.
-size - FLOAT size of release in mb's.
+* nfo_data - STRING entire blob base64 encoded.
+* release - STRING release name.
+* filename - STRING NFO original filename.
+* save - BOOL true or false, to allow the user to download the original NFO or not.
+* date - STRING Format this however you like as there is no datetime conversion done server side. Suggest sending UTC formatted date like 2005-05-28 17:58:07.
+* files - INT Total number of files in release.
+* size - FLOAT size of release in mb's.
 
 ### Response Format
 
