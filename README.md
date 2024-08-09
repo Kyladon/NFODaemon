@@ -1,4 +1,4 @@
-**NFO Sharing Daemon**
+**SPRE NFO Daemon**
 =====================================
 
 **Overview**
