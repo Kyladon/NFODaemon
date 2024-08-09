@@ -20,7 +20,7 @@ Lets Encrypt certificate (See [Getting Started](#getting-started))
 **Important Notes**
 
 * This project uses Flask, which is not intended for production use. However, it has been found to be suitable for this purpose.
-* For optimal security and reliability, we recommend running the daemon in an isolated container.
+* For optimal security and reliability, we recommend running the daemon in an isolated container. **DO NOT RUN AS ROOT**
 
 **Getting Started**
 -------------------
