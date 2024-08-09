@@ -4,7 +4,7 @@
 
 **Overview**
 
-This daemon provides a secure way to privately share NFO files with trusted groups. It's intended to be used in isolation from databases and other services.
+This daemon provides a lightweight way to privately share NFO files with trusted groups. It's intended to be used in isolation from databases and other services.
 
 **REQUIREMENTS**
 -------------------
