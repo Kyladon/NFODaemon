@@ -26,7 +26,7 @@ This daemon provides a secure way to privately share NFO files with trusted grou
     "nfo_data": "<base64_encoded_data>", **REQUIRED**
     "release": "<release_name>", **REQUIRED**
     "filename": "<original_filename>", **REQUIRED**
-    "save": true, **REQUIRED**
+    "save": <boolean>, **REQUIRED**
     "date": "<UTC_formatted_date>",
     "files": "<number_of_files>",
     "size": "<total_size_mb>"
