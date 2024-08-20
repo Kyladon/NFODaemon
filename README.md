@@ -30,7 +30,7 @@ By default, NFO's are only viewable up to 5 minutes after submission. The daemon
 Once done you should copy the files to a location accessable by this daemon and update the le_ variables in `main.py` 
 4. To send an NFO file to the daemon, follow these steps:
 
-### Sending an NFO File
+### Sending a NFO File and (optionally) SFV file(s)
 
 * Send a POST request to `https://<host_address>:<host_port>/upload_nfo`
 * Include an `Authorization` header with a valid token (see [Token Support](#token-support))
@@ -44,10 +44,23 @@ Once done you should copy the files to a location accessable by this daemon and 
     "date": "<UTC_formatted_date>",
     "files": "<number_of_files>",
     "size": "<total_size_mb>"
+    "sfvs": [    **OPTIONAL**
+      {
+        "sfv_data": "<base64_encoded_data>", **REQUIRED**
+        "sfvname": "release1.sfv",  **REQUIRED**
+        "sfvpath": "cd1"  **OPTIONAL**
+      },
+      {
+        "sfv_data": "base64_encoded_sfv_blob",  **REQUIRED**
+        "sfvname": "release2.sfv",  **REQUIRED**
+        "sfvpath": "cd2"  **OPTIONAL**
+      }
+    ]
 }
 ```
 * Required fields are marked with `REQUIRED` and must be included in the request.
 * Optional fields can be omitted if not applicable.
+* The sfvs array is optional, but if included there needs to be at least one entry with sfv_data and sfvname
 
 | Field       | Type     | Description                                                            |
 | :---------- | :------: | :--------------------------------------------------------------------- |
@@ -58,6 +71,9 @@ Once done you should copy the files to a location accessable by this daemon and 
 |**date**     | STRING   | Format this however you like as there is no datetime conversion done server side. Suggest sending UTC formatted date like 2005-05-28 17:58:07.|
 |**files**    | INT      | Total number of files in release.|
 |**size**     | FLOAT    | Size of release in mb's.|
+|**sfv_data** | STRING   | entire blob base64 encoded.                                           |
+|**sfvname**  | STRING   | SFV original filename                                                 |
+|**sfvpath**  | STRING   | Path to SFV file in case more than one, EG CD1/ CD2/ etc..            |
 
 ### Response Format
 
