@@ -1,5 +1,5 @@
 # SPRE NFO Daemon
-# v1.0
+# v1.6
 
 import os
 import base64
@@ -63,7 +63,7 @@ def read_nfo_from_base64(base64_data):
 def render_nfo_to_image(lines):
     font = ImageFont.truetype(font_path, font_size)
     
-# Time calculate the size of the image
+    # Time to calculate the size of the image
     padding = 20
     max_text_width = max(font.getbbox(line)[2] for line in lines)
     width = max_text_width + padding * 2
@@ -72,13 +72,68 @@ def render_nfo_to_image(lines):
     image = Image.new('RGB', (int(width), height), color=background_color)
     draw = ImageDraw.Draw(image)
     
-# Render the NFO text
+    # Render the NFO text
     y = padding
     for line in lines:
         draw.text((padding, y), line.strip('\r\n'), font=font, fill=font_color)
         y += font_size
 
     return image
+
+def save_sfv_files(sfvs, hexdig):
+    saved_paths = []
+    for i, sfv in enumerate(sfvs):
+        sfv_data = sfv['sfv_data']
+        sfvname = sfv['sfvname']
+        sfvpath = sfv.get('sfvpath', '')
+
+        sfv_lines = read_nfo_from_base64(sfv_data)
+        sfv_image = render_nfo_to_image(sfv_lines)
+
+        sfv_hash_input = sfv_data + datetime.now().strftime("%Y%m%d%H%M%S%f")
+        sfv_hash_object = hashlib.md5(sfv_hash_input.encode())
+        sfv_hexdig = sfv_hash_object.hexdigest()
+
+        sfv_image_path = f"static/{sfv_hexdig}.png"
+        sfv_image.save(sfv_image_path)
+
+        sfv_data_path = f"static/{sfv_hexdig}.sfv"
+        with open(sfv_data_path, 'wb') as f:
+            f.write(base64.b64decode(sfv_data))
+        
+        saved_paths.append({
+            'sfv_data_path': sfv_data_path,
+            'sfv_image_path': sfv_image_path,
+            'sfvname': sfvname,
+            'sfvpath': sfvpath,
+            'sfv_hexdig': sfv_hexdig
+        })
+    
+    # Save the SFV metadata to a file for later retrieval
+    sfv_metadata_path = f"static/{hexdig}_sfv_metadata.txt"
+    with open(sfv_metadata_path, 'w') as f:
+        for sfv in saved_paths:
+            f.write(f"{sfv['sfv_hexdig']}|{sfv['sfvname']}|{sfv['sfvpath']}\n")
+    
+    return saved_paths
+
+def load_sfv_metadata(hexdig):
+    sfv_metadata_path = f"static/{hexdig}_sfv_metadata.txt"
+    saved_paths = []
+    if os.path.exists(sfv_metadata_path):
+        with open(sfv_metadata_path, 'r') as f:
+            for line in f:
+                sfv_hexdig, sfvname, sfvpath = line.strip().split('|')
+                sfv_data_path = f"static/{sfv_hexdig}.sfv"
+                sfv_image_path = f"static/{sfv_hexdig}.png"
+                saved_paths.append({
+                    'sfv_data_path': sfv_data_path,
+                    'sfv_image_path': sfv_image_path,
+                    'sfvname': sfvname,
+                    'sfvpath': sfvpath,
+                    'sfv_hexdig': sfv_hexdig
+                })
+    return saved_paths
 
 #----------------------
 #-API Stuff
@@ -100,6 +155,7 @@ def upload_nfo():
         date = data.get('date', '')
         files = data.get('files', '')
         size = data.get('size', '')
+        sfvs = data.get('sfvs', [])
 
         lines = read_nfo_from_base64(base64_data)
         image = render_nfo_to_image(lines)
@@ -126,7 +182,7 @@ def upload_nfo():
         with open(filename_info_path, 'w') as f:
             f.write(filename)
         
-## Save the NFO data if save is allowed
+# Save the NFO data if save is allowed
         if save:
             nfo_data_path = f"static/{hexdig}.nfo"
             with open(nfo_data_path, 'wb') as f:
@@ -139,8 +195,13 @@ def upload_nfo():
         with open(optional_fields_path, 'w') as f:
             f.write(f"{date}\n{files}\n{size}")
         
+        # Save SFV files if provided
+        saved_sfv_paths = []
+        if sfvs:
+            saved_sfv_paths = save_sfv_files(sfvs, hexdig)
+
         # Server the web page!
-        threading.Thread(target=remove_file_after_delay, args=(image_path, release_info_path, nfo_data_path, filename_info_path, timeout_seconds)).start() 
+        threading.Thread(target=remove_file_after_delay, args=(image_path, release_info_path, nfo_data_path, filename_info_path, saved_sfv_paths, timeout_seconds)).start() 
         
         return jsonify({"url": f"/viewer/{hexdig}", "message": "Success"})
         
@@ -222,16 +283,59 @@ def serve_image(filename):
     max_value_length = max(len(value) for value in [original_filename, date, files, size])
     col_width = max(max_label_length, max_value_length) + 2  # Adding padding
 
-    html_content = '''
+    # Load SFV metadata for display
+    saved_sfv_paths = load_sfv_metadata(filename)
+    sfv_renderings = ''
+    for sfv in saved_sfv_paths:
+        sfv_filename = sfv['sfvname']
+        sfv_image_path = sfv['sfv_image_path']
+        sfv_path = sfv['sfvpath']
+        sfv_hexdig = sfv['sfv_hexdig']
+
+        # Create SFV table HTML
+        sfv_table = f'''
+        <div class="info-table-container">
+            <table class="info-table">
+                <tr>
+                    <th>SFV Filename</th>
+                    <td>{sfv_filename}</td>
+                </tr>
+        '''
+        if sfv_path:
+            sfv_table += f'''
+                <tr>
+                    <th>SFV Path</th>
+                    <td>{sfv_path}</td>
+                </tr>
+            '''
+        sfv_table += f'''
+            </table>
+        </div>
+        <p></p>
+        <div style="text-align: center;"><a href="/download_sfv/{sfv_hexdig}" class="download-button">Download SFV</a></div>        
+        <p></p>
+        '''
+
+        sfv_renderings += f'''
+        <hr>
+        {sfv_table}
+        <table style="margin: 0 auto;">
+            <tr>
+                <td><img id="sfvImage" src="/static/{sfv_hexdig}.png" alt="SFV Image"></td>
+            </tr>
+        </table>
+        '''
+
+    html_content = f'''
         <!doctype html>
         <html lang="en">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-            <title>{{ release }}</title>
-            <link rel="stylesheet" href="{{ url_for('serve_fonts', filename='roboto.css') }}">
+            <title>{release}</title>
+            <link rel="stylesheet" href="{{{{ url_for('serve_fonts', filename='roboto.css') }}}}">
             <style>
-                body {
+                body {{
                     background-color: #1a1a1a;  /* Dark grey background */
                     color: white;
                     display: flex;
@@ -241,65 +345,65 @@ def serve_image(filename):
                     margin: 0;
                     font-family: 'Roboto', sans-serif;
                     transition: all 0.5s ease;
-                }
-                .title-container {
+                }}
+                .title-container {{
                     background-color: black;
                     border-radius: 15px;
                     padding: 10px 20px;
                     margin-top: 20px;
                     text-align: center;
-                }
-                h4 {
+                }}
+                h4 {{
                     margin: 0;
-                }
-                .info-table-container {
+                }}
+                .info-table-container {{
                     display: flex;
                     justify-content: center;
                     width: 100%;
-                }
-                .info-table {
+                }}
+                .info-table {{
                     width: auto;
                     margin-top: 20px;
                     border-collapse: collapse;
-                }
-                .info-table td, .info-table th {
+                }}
+                .info-table td, .info-table th {{
                     border: 1px solid #ddd;
                     padding: 8px;
-                    width: {{ col_width }}ch;
-                }
-                .info-table th {
+                    width: {col_width}ch;
+                }}
+                .info-table th {{
                     background-color: #333;
                     color: white;
                     text-align: right;
-                }
-                .info-table td {
+                }}
+                .info-table td {{
                     text-align: left;
-                }
-                hr {
+                }}
+                hr {{
                     border: 1px solid white;
                     width: 100%;
                     margin: 10px 0;
-                }
-                table {
+                }}
+                table {{
                     margin-top: 20px;
                     border: 0;
                     background-color: black;  /* Black table background */
                     overflow: hidden;
-                }
-                img {
+                }}
+                img {{
                     display: block;
                     transition: all 0.5s ease;
-                }
-                .inverted {
+                }}
+                .inverted {{
                     filter: invert(100%);
                     background-color: #f0f0f0;  /* Light grey background for contrast */
-                }
-                .dropdown {
+                }}
+                .dropdown {{
                     position: absolute;
                     top: 10px;
                     right: 10px;
-                }
-                select {
+                }}
+                select {{
                     font-family: 'Roboto', sans-serif;
                     padding: 5px 10px;
                     border-radius: 15px;  /* Rounded edges */
@@ -307,12 +411,12 @@ def serve_image(filename):
                     background-color: white;
                     color: black;
                     transition: background-color 0.5s, color 0.5s;
-                }
-                select:focus {
+                }}
+                select:focus {{
                     outline: none;
                     border-color: #888;
-                }
-                .download-button {
+                }}
+                .download-button {{
                     display: block;
                     padding: 10px 20px;
                     border-radius: 15px;
@@ -320,13 +424,13 @@ def serve_image(filename):
                     color: black;
                     text-decoration: none;
                     font-family: 'Roboto', sans-serif.
-                }
-                .download-button:hover {
+                }}
+                .download-button:hover {{
                     background-color: #ccc;
-                }
-                .expired-banner {
+                }}
+                .expired-banner {{
                     margin-top: 10px;
-                }
+                }}
             </style>
           </head>
           <body>
@@ -338,73 +442,80 @@ def serve_image(filename):
             </div>
             <div id="content">
                 <div class="title-container">
-                    <h4>{{ release }}</h4>
+                    <h4>{release}</h4>
                 </div>
                 <div class="info-table-container">
                     <table class="info-table">
                         <tr>
                             <th>File Name</th>
-                            <td>{{ filename }}</td>
+                            <td>{original_filename}</td>
                         </tr>
-                        {% if date %}
+        '''
+    if date:
+        html_content += f'''
                         <tr>
                             <th>Pre Date</th>
-                            <td>{{ date }}</td>
+                            <td>{date}</td>
                         </tr>
-                        {% endif %}
-                        {% if files %}
+        '''
+    if files:
+        html_content += f'''
                         <tr>
                             <th>Files</th>
-                            <td>{{ files }}</td>
+                            <td>{files}</td>
                         </tr>
-                        {% endif %}
-                        {% if size %}
+        '''
+    if size:
+        html_content += f'''
                         <tr>
                             <th>Size</th>
-                            <td>{{ size }}</td>
+                            <td>{size}</td>
                         </tr>
-                        {% endif %}
+        '''
+    html_content += f'''
                     </table>
                 </div>
-                {{ download_button|safe }}
-                {{ expired_message|safe }}
+                {download_button}
+                {expired_message}
                 <table>
                   <tr>
-                    <td><img id="nfoImage" src="/static/{{ image_filename }}.png" alt="NFO Image"></td>
+                    <td><img id="nfoImage" src="/static/{filename}.png" alt="NFO Image"></td>
                   </tr>
                 </table>
+                {sfv_renderings}
             </div>
             <script>
-                function toggleInvert() {
+                function toggleInvert() {{
                     var body = document.body;
                     var colorMode = document.getElementById('colorMode').value;
-                    if (colorMode === 'inverted') {
+                    if (colorMode === 'inverted') {{
                         body.classList.add('inverted');
-                    } else {
+                    }} else {{
                         body.classList.remove('inverted');
-                    }
-                }
-                document.addEventListener("DOMContentLoaded", function() {
+                    }}
+                }}
+                document.addEventListener("DOMContentLoaded", function() {{
                     var downloadButton = document.querySelector('.download-button');
-                    if (downloadButton) {
-                        downloadButton.addEventListener('click', function(event) {
+                    if (downloadButton) {{
+                        downloadButton.addEventListener('click', function(event) {{
                             event.preventDefault();
                             fetch(this.href)
-                                .then(response => {
-                                    if (!response.ok) {
+                                .then(response => {{
+                                    if (!response.ok) {{
                                         document.getElementById('expired-banner').style.display = 'block';
-                                    } else {
+                                    }} else {{
                                         window.location.href = this.href;
-                                    }
-                                });
-                        });
-                    }
-                });
+                                    }}
+                                }});
+                        }});
+                    }}
+                }});
             </script>
           </body>
         </html>
     '''
-    return render_template_string(html_content, release=release, download_button=download_button, expired_message=expired_message, filename=original_filename, image_filename=filename, date=date, files=files, size=size, col_width=col_width)
+
+    return render_template_string(html_content)
 
 @app.route('/download/<filename>')
 def download_nfo(filename):
@@ -416,6 +527,25 @@ def download_nfo(filename):
     with open(filename_info_path, 'r') as f:
         original_filename = f.read()
     return send_file(nfo_path, as_attachment=True, download_name=original_filename)
+
+@app.route('/download_sfv/<sfv_hexdig>')
+def download_sfv(sfv_hexdig):
+    # Determine the correct NFO hash by finding the relevant metadata file
+    for root, dirs, files in os.walk('static'):
+        for file in files:
+            if file.endswith('_sfv_metadata.txt'):
+                sfv_metadata_path = os.path.join(root, file)
+                with open(sfv_metadata_path, 'r') as f:
+                    for line in f:
+                        if sfv_hexdig in line:
+                            sfvname = line.split('|')[1]
+                            sfv_data_path = f'static/{sfv_hexdig}.sfv'
+                            if os.path.exists(sfv_data_path):
+                                return send_file(sfv_data_path, as_attachment=True, download_name=sfvname)
+    
+    # If the file doesn't exist or wasn't found, return a 404 error
+    return "", 404
+
 
 @app.route('/fonts/<path:filename>')
 def serve_fonts(filename):
@@ -430,7 +560,7 @@ def favicon():
 # Cleanup files after NFO timeout.
 # NOTE if you were to kill the process before this cleanup occurs, the files will remain in static.
 # I use this as a way of easily testing without having to send new NFO data
-def remove_file_after_delay(image_path, release_info_path, nfo_data_path, filename_info_path, delay):
+def remove_file_after_delay(image_path, release_info_path, nfo_data_path, filename_info_path, saved_sfv_paths, delay):
     time.sleep(delay)
     if os.path.exists(image_path):
         os.remove(image_path)
@@ -440,6 +570,18 @@ def remove_file_after_delay(image_path, release_info_path, nfo_data_path, filena
         os.remove(nfo_data_path)
     if filename_info_path and os.path.exists(filename_info_path):
         os.remove(filename_info_path)
+    optional_fields_path = f"{os.path.splitext(image_path)[0]}_optional.txt"
+    sfv_metadata_path = f"{os.path.splitext(image_path)[0]}_sfv_metadata.txt"
+    if os.path.exists(optional_fields_path):
+        os.remove(optional_fields_path)
+    if os.path.exists(sfv_metadata_path):
+        os.remove(sfv_metadata_path)
+    for sfv in saved_sfv_paths:
+        if os.path.exists(sfv['sfv_data_path']):
+            os.remove(sfv['sfv_data_path'])
+        if os.path.exists(sfv['sfv_image_path']):
+            os.remove(sfv['sfv_image_path'])
+
 
 if __name__ == '__main__':
     context = (le_fullchain, le_privkey)  # lets encrypt certs for ssl
