@@ -1,5 +1,5 @@
 # SPRE NFO Daemon
-# v1.6
+# v1.7
 
 import os
 import base64
@@ -63,7 +63,7 @@ def read_nfo_from_base64(base64_data):
 def render_nfo_to_image(lines):
     font = ImageFont.truetype(font_path, font_size)
     
-    # Time to calculate the size of the image
+# Time to calculate the size of the image
     padding = 20
     max_text_width = max(font.getbbox(line)[2] for line in lines)
     width = max_text_width + padding * 2
@@ -581,6 +581,26 @@ def remove_file_after_delay(image_path, release_info_path, nfo_data_path, filena
             os.remove(sfv['sfv_data_path'])
         if os.path.exists(sfv['sfv_image_path']):
             os.remove(sfv['sfv_image_path'])
+
+#### New stuff to handle bot scans
+@app.before_request
+def restrict_request_methods():
+    # The only request types we need to support are GET and POST
+    valid_request_types = ['GET', 'POST']
+    
+    if request.method not in valid_request_types:
+        # Drop connection silently
+        return "", 500
+
+    # Check for malformed or missing HTTP versions
+    if not request.environ.get('SERVER_PROTOCOL', '').startswith('HTTP/'):
+        return "", 500
+
+# Drop responses for bots scanning for services.
+@app.errorhandler(404)
+def page_not_found(e):
+    return "", 500
+        
 
 
 if __name__ == '__main__':
