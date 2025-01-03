@@ -1206,24 +1206,24 @@ async def serve_image(request, filename):
         size=size,
         section=section,
         sfv_renderings=sfv_renderings,
-        mi_renderings = mi_renderings,
+        mi_renderings=mi_renderings,
         filename=filename,
         mediainfo_rendering=mediainfo_rendering,
         download_button=download_button,
         expired_message=expired_message,
         file_size_info=file_size_info,
         file_list_html=file_list_html,
-        original_filename = original_filename,
-        nfo_badges = nfo_badges,
+        original_filename=original_filename,
+        nfo_badges=nfo_badges,
         download_all_button=download_all_button,
         url_for=app.url_for,
         date_info=date_info,
         section_info=section_info,
         mediainfo_info=mediainfo_info,
         files_info=files_info,
-        badge_color = badge_color,
-        viewer_background_color = viewer_background_color,
-        mi_background_color = mi_background_color
+        badge_color=badge_color,
+        viewer_background_color=viewer_background_color,
+        mi_background_color=mi_background_color
     ))
     
 @app.route('/download/<filename>')
