@@ -1362,7 +1362,7 @@ async def favicon(request):
 # Cleanup files after NFO timeout.
 # NOTE if you were to kill the process before this cleanup occurs, the files will remain in static.
 # I use this as a way of easily testing without having to send new NFO data
-def CleanupFiles(image_path, release_info_path, nfo_data_path, filename_info_path, saved_sfv_paths,saved_mi_paths, delay):
+def CleanupFiles(image_path, release_info_path, nfo_data_path, filename_info_path, saved_sfv_paths, saved_mi_paths, delay):
     time.sleep(delay)
     if os.path.exists(image_path):
         os.remove(image_path)
