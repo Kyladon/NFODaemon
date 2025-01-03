@@ -951,7 +951,7 @@ async def serve_image(request, filename):
                 @font-face {
                     font-family: 'Roboto Mono';
                     src: url('{{ url_for("serve_fonts", filename="RobotoMono.ttf") }}') format('truetype');
-                }            
+                }
                 body {
                     background-color: rgb({{ viewer_background_color }});
                     color: white;
@@ -1005,8 +1005,8 @@ async def serve_image(request, filename):
                     width: 100%;
                     line-height:1;
                     text-align: center;
-
                 }
+                
                 #sidebar > div {
                     padding: 4px 8px;
                     border-bottom: 1px solid #343a40;
@@ -1027,7 +1027,7 @@ async def serve_image(request, filename):
                #sidebar > div a {
                    font-size: 0.85rem;
                    font-family: 'Roboto Mono', monospace;
-                }                
+                }
                 .icon {
                     height: 1.5em;
                     filter: invert(1);
@@ -1072,7 +1072,7 @@ async def serve_image(request, filename):
                     font-family: 'Roboto Mono', monospace;
                     padding: 10px;
                     margin: 0;
-                    white-space: pre;      
+                    white-space: pre;
                     /*overflow-x: auto;      */
                     border-radius: 5px;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.25);
@@ -1095,13 +1095,13 @@ async def serve_image(request, filename):
                 align-items: center;
                 margin-right: -15px; 
                 transition: background-color 0.3s ease;
-                }                                        
+                }
                 .btn-download-container:hover{
                     background-color: rgb({{ badge_color }});
                     margin-right: -15px;
                 } 
 
-                                    
+
             </style>
         </head>
         <body>
@@ -1126,7 +1126,7 @@ async def serve_image(request, filename):
                 {{nfo_badges|safe}}
                 <div style="padding-left: 10px;"><img id="nfoImage" src="/static/{{ filename }}.png" alt="NFO Image"></div>
                 {{ sfv_renderings|safe }}
-                {{ mi_renderings|safe }}                                        
+                {{ mi_renderings|safe }}
                 <div style="height: 250px;"></div> <!-- Some needed padding especially if SFV's are small... -->
             </div>
 
@@ -1138,7 +1138,7 @@ async def serve_image(request, filename):
               document.addEventListener('DOMContentLoaded', function() {
                 $(function () {
                 $('[data-toggle="tooltip"]').tooltip()
-                });                                        
+                });
                 const truncationCache = new Map(); // Cache to store bestLength per max_em_width
                 const minLength = 5;
                 const maxLength = 32; // Maximum length of characters before truncation 
@@ -1394,7 +1394,7 @@ def CleanupFiles(image_path, release_info_path, nfo_data_path, filename_info_pat
     for mi in saved_mi_paths:
         # Remove the mi data file if it exists and is not None
         if mi['mi_data_path'] is not None and os.path.exists(mi['mi_data_path']):
-            os.remove(mi['mi_data_path'])            
+            os.remove(mi['mi_data_path'])
 
 
 @app.middleware("request")
@@ -1415,7 +1415,7 @@ load_tokens()
 
 if __name__ == '__main__':
     ssl_context = None
-    if os.path.exists(le_certpath) :
+    if os.path.exists(le_certpath):
         ssl_context = le_certpath
         print("SSL Certificates found, running with SSL")
         sslFlag = True
