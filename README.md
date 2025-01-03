@@ -16,7 +16,7 @@ By default, NFO's are only viewable up to 5 minutes after submission. The daemon
 # Change Log
 Version 2.x made some big changes, especially to the libraries being used.
 
-## [2.1 Final] - 2025-01-02
+## [2.2 Final] - 2025-01-02
 ## [2.1 Beta] - 2024-12-27
 
  
