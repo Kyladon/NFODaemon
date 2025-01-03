@@ -631,7 +631,7 @@ async def serve_image(request, filename):
     elif files:
         file_size_info = f'<div><img src="{app.url_for("serve_svg_icons", filename="files.svg")}" class="icon"> {files} Files / </div>'
     elif size:
-         file_size_info = f'<div><img src="{app.url_for("serve_svg_icons", filename="files.svg")}" class="icon"> {size}</div>'
+        file_size_info = f'<div><img src="{app.url_for("serve_svg_icons", filename="files.svg")}" class="icon"> {size}</div>'
     section_info = f'<div><img src="{app.url_for("serve_svg_icons", filename="section.svg")}" class="icon"> {section.upper()}</div>' if section else ''
 
     # Check if hash exists, and download NFO button handler.
@@ -826,7 +826,6 @@ async def serve_image(request, filename):
 
 
     # Load mediainfo files to display in the main window, if there are any...
- #   saved_mi_paths = load_mi_metadata(filename)
     mi_renderings = ''
     for mi in saved_mi_paths:
         mi_filename = mi['miname']
