@@ -82,8 +82,9 @@ Once done you should either copy the files to a folder accessable by this daemon
     "mediainfos": [    **OPTIONAL**
       {
         "mi_data": "<base64_encoded_mediainfo_blob>", **REQUIRED**
-        "sfvname": "file.mediainfo",  **REQUIRED**
-        "sfvpath": ""  **OPTIONAL**
+        "miname": "file.mediainfo",  **REQUIRED**
+        "mipath": "",  **OPTIONAL**
+	"mitruncated": "<boolean>", **OPTIONAL, DEFAULT = FALSE**
       },
       {
         "mi_data": "base64_encoded_mediainfo_blob",  **REQUIRED**
@@ -133,20 +134,21 @@ Once done you should either copy the files to a folder accessable by this daemon
 
 | Field       | Type     | Description                                                            |
 | :---------- | :------: | :--------------------------------------------------------------------- |
-|**nfo_data** | STRING   | entire blob base64 encoded.                                            |
-|**release**  | STRING   | release name.                                                          |
-|**filename** | STRING   | NFO original filename.                                                 |
-|**save**     | BOOL     | true or false, to allow the user to download the original NFO or not.  |
-|**date**     | STRING   | Format this however you like as there is no datetime conversion done server side. Suggest sending UTC formatted date like 2005-05-28 17:58:07.|
-|**files**    | INT      | Total number of files in release.                                     |
-|**size**     | FLOAT    | Size of release in mb's.                                              |
-|**section**  | STRING   | Name of the section the release resides in                            |
-|**sfv_data** | STRING   | entire SFV blob base64 encoded.                                       |
-|**sfvname**  | STRING   | SFV original filename                                                 |
-|**sfvpath**  | STRING   | Path to SFV file in case more than one, EG CD1/ CD2/ etc..            |
-|**mi_data** | STRING    | entire .MEDIAINFO blob base64 encoded.                                |
-|**miname**  | STRING    | mediainfo original filename                                           |
-|**mipath**  | STRING    | Path to mediainfo file in case more than one, oldschool video...      |
+|**nfo_data**    | STRING   | entire blob base64 encoded.                                            |
+|**release**     | STRING   | release name.                                                          |
+|**filename**    | STRING   | NFO original filename.                                                 |
+|**save**        | BOOL     | true or false, to allow the user to download the original NFO or not.  |
+|**date**        | STRING   | Format this however you like as there is no datetime conversion done server side. Suggest sending UTC formatted date like 2005-05-28 17:58:07.|
+|**files**       | INT      | Total number of files in release.                                     |
+|**size**        | FLOAT    | Size of release in mb's.                                              |
+|**section**     | STRING   | Name of the section the release resides in                            |
+|**sfv_data**    | STRING   | entire SFV blob base64 encoded.                                       |
+|**sfvname**     | STRING   | SFV original filename                                                 |
+|**sfvpath**     | STRING   | Path to SFV file in case more than one, EG CD1/ CD2/ etc..            |
+|**mi_data**     | STRING   | entire .MEDIAINFO blob base64 encoded.                                |
+|**miname**      | STRING   | mediainfo original filename                                           |
+|**mipath**      | STRING   | Path to mediainfo file in case more than one, oldschool video...      |
+|**mitruncated** | BOOL     | is mediainfo file truncated, more on that below                       |
 
 #### Optional Mediainfo JSON section
 ##### This is seperate to the mediainfo blob, and is used only to show extra details on the sidebar if desired.
@@ -180,6 +182,10 @@ If you dont care about mediainfo OR you have actual .mediainfo files then you ca
 ##### Example output with mediainfo
 ![image](https://github.com/user-attachments/assets/eb4f2c2e-6bb0-4ec5-92c0-dc539ce6731b)
 
+##### Truncated mediainfo files
+For some, having a complete mediainfo file collection is not viable without local access to a huge archive and a lot of time to scan.
+It's possible to extract 95% of the information from the video file header. For example downloading only the first 15mb of the first .rar file and extracting the truncated video file. Run mediainfo -f on that and you will get most things except element counts and subtitle durations.
+When you import mediainfo's into your own local database, you should also flag them as truncated for easy replacement in the future.
 
 ### Response Format
 
