@@ -427,7 +427,7 @@ def parse_mediainfo_file(mi_data):
 # We have this mostly for the new status endpoint to handle recycling of the daemon externally if required
 def get_ssl_expiry_date(cert_path):
     try:
-        cert_info = ssl._ssl._test_decode_cert(cert_path)
+        cert_info = ssl._ssl._test_decode_cert(cert_path)  # type: ignore
         not_after_str = cert_info.get('notAfter')
         if not_after_str:
             dt = datetime.strptime(not_after_str, "%b %d %H:%M:%S %Y %Z")
