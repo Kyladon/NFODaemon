@@ -39,6 +39,10 @@ timeout_seconds = 300                  # NFO timeout, how long before the files 
 
 TOKEN_FILE = 'tokens.txt'              # Access tokens for REST API Access
 
+#- Mediainfo override (if set then daemon will ignore mediainfo json (if any) and parse mediainfo file to populate the sidebar mediainfo)
+#  If set to true this will also use the mediainfo file when there is no mediainfo json
+mi_json_override = True
+
 #-Lets Encrypt certificate path (make sure this is accessible to the daemon user)
 le_certpath = "/etc/letsencrypt/live/your.domain.here/" # Should only need to update this path.
 
