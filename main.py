@@ -1,6 +1,5 @@
 # SPRE NFO Daemon
 # v2.2
-# BETA TESTING!!
 
 import os
 import base64
@@ -45,8 +44,13 @@ le_certpath = "/etc/letsencrypt/live/your.domain.here/" # Should only need to up
 
 #-HTML Template variables
 badge_color = "0, 150, 112"            # Badge background color (filenames on the main section). This overrides the default bootstrap theme's colour.
+warning_badge_color = "252, 174, 124"  # Warning badge background color, used for mediainfo truncated warning flag
 viewer_background_color = "0, 0, 0"    # Main viewer background color, default is black to match NFO render.
 mi_background_color = "52,58,64"       # Mediainfo text background color
+
+#-Tooltip labels. If desirable you can customize the text used on various things here rather than having to edit the code.
+download_all_text = "Download nfo/sfv files as a release package (incl paths)"
+truncated_mi_text = "This mediainfo was created using only the video data found in the first rar archive (.rar)"
 
 #-NFO Render settings (Default config works well, recommend not changing these settings)
 font_path = "fonts/cp437_IBM_VGA8.ttf" # Font to render NFOs. I find this is the best one to get a decent clean render
@@ -55,6 +59,12 @@ font_color = "white"                   # Font colour to render
 background_color = "black"             # Background colour to render. Note, you should also adjust the HTML color scheme if you change this
 #----------------------------------------------------------------------------------------------------
 ######################################################################################################
+
+#- If you want you can also override some of the audio names in mediainfo, I do this purely to shorten them for the sidebar.
+AUDIO_NAME_OVERRIDES = {
+    "Dolby TrueHD with Dolby Atmos": "TrueHD with Atmos",
+    "Dolby Digital Plus with Dolby Atmos": "DD+ with Atmos",
+}
 
 # Token Support
 def load_tokens():
@@ -171,6 +181,7 @@ def save_mi_files(mis, hexdig, save):
         mi_data = mi['mi_data']
         miname = mi['miname']
         mipath = mi.get('mipath', '')
+        mitruncated = mi.get('mitruncated', False)  # New field
         mi_hash_input = mi_data + datetime.now().strftime("%Y%m%d%H%M%S%f")
         mi_hash_object = hashlib.md5(mi_hash_input.encode())
         mi_hexdig = mi_hash_object.hexdigest()
@@ -185,7 +196,8 @@ def save_mi_files(mis, hexdig, save):
                 'mi_data_path': mi_data_path,
                 'miname': miname,
                 'mipath': mipath,
-                'mi_hexdig': mi_hexdig
+                'mi_hexdig': mi_hexdig,
+                'mitruncated': mitruncated
             })
         else: #User is not allowed to download the original files.
             # No MI file
@@ -193,12 +205,13 @@ def save_mi_files(mis, hexdig, save):
                 'mi_data_path': None,
                 'miname': miname,
                 'mipath': mipath,
-                'mi_hexdig': mi_hexdig
+                'mi_hexdig': mi_hexdig,
+                'mitruncated': mitruncated
             })
 
         # Add to metadata lines regardless of save
         # This ensures the viewer knows about these MI images with the updated logic.
-        mi_metadata_lines.append(f"{mi_hexdig}|{miname}|{mipath}\n")
+        mi_metadata_lines.append(f"{mi_hexdig}|{miname}|{mipath}|{str(mitruncated)}\n")
     
     # Always write metadata, even if save=false
     mi_metadata_path = f"static/{hexdig}_mi_metadata.txt"
@@ -213,23 +226,25 @@ def load_mi_metadata(hexdig):
     if os.path.exists(mi_metadata_path):
         with open(mi_metadata_path, 'r') as f:
             for line in f:
-                mi_hexdig, miname, mipath = line.strip().split('|')
+                mi_hexdig, miname, mipath, mitruncated_str   = line.strip().split('|')
                 mi_data_path = f"static/{mi_hexdig}.mi"
+                mitruncated = mitruncated_str.lower() == 'true'
                 saved_paths.append({
                     'mi_data_path': mi_data_path,
                     'miname': miname,
                     'mipath': mipath,
-                    'mi_hexdig': mi_hexdig
+                    'mi_hexdig': mi_hexdig,
+                    'mitruncated': mitruncated
                 })
     return saved_paths
 
 def handle_mi_encode_settings(mi_text):
     # Returns modified version of mi_text with the Encoding settings line split for display purposes
+    # Does not affect actual mediainfo file download if applicable
     lines = mi_text.splitlines()
     new_lines = []
 
     for line in lines:
-        # DO I need to check for multilanguage?
         if line.strip().startswith("Encoding settings"):
             # Find the first colon (":") so we can split
             colon_index = line.find(':')
@@ -237,26 +252,24 @@ def handle_mi_encode_settings(mi_text):
                 left_part  = line[:colon_index+1]  # include the colon
                 right_part = line[colon_index+1:].strip()
 
-                # Start splitting options
+                # Start splitting options where required (encoding settings)
                 segments = right_part.split(" / ")
 
-                # 3) The first segment gets appended to the left_part
-                #    so it looks like:  Encoding settings ... : cabac=1
+                # The first segment gets appended to the left_part
+                # so it looks like:  Encoding settings ... : cabac=1
                 if segments:
                     first_segment = segments[0]
                     new_lines.append(f"{left_part} {first_segment}")
 
-                # 4) For subsequent segments, indent them to align with the colon
-                #    so it looks like:  (spaces) : ref=4
-                #    We'll figure out how many spaces are before the colon
-                #    so we can replicate that indentation.
-                indent_length = len(left_part) - 1  # minus 1 so the colon lines up 
-                                                    # with the colon of the first line
+                # For subsequent segments, indent them to align with the colon
+                # so it looks like:  (spaces) : ref=4
+                # Figure out how many spaces are before the colon so we can replicate that indentation.
+                indent_length = len(left_part) - 1  # minus 1 so the colon lines up  with the colon of the first line
                 indentation = " " * indent_length
                 for seg in segments[1:]:
                     new_lines.append(f"{indentation}: {seg}")
             else:
-                # If no colon was found, just keep the line as-is
+                # If no colon was found, just keep the line as is
                 new_lines.append(line)
         else:
             # For all other lines, leave them alone
@@ -265,7 +278,147 @@ def handle_mi_encode_settings(mi_text):
     # Rejoin with newlines
     return "\n".join(new_lines)
 
-    
+
+def override_commercial_name(name: str) -> str:
+    #If 'name' is in the AUDIO_NAME_OVERRIDES dic then return the shorter name
+    return AUDIO_NAME_OVERRIDES.get(name, name)
+
+def first_val(kv_map, key):
+    # Return the first stored value for 'key' (or empty string) from kv_map
+    return kv_map.get(key, [])[0] if key in kv_map else ""
+
+def normalized_section_name(sec_name):
+    # Determine if sec_name is 'Video', 'Audio', or 'Text', ignoring #1, #2, etc.
+    # Return 'other' if it doesn't match any known sections.
+    name_lower = sec_name.lower()
+    if 'video' in name_lower:
+        return 'video'
+    elif 'audio' in name_lower:
+        return 'audio'
+    elif 'text' in name_lower:
+        return 'text'
+    return 'other'
+
+def parse_mediainfo_file(mi_data):
+    # Parse raw .mi text into a dictionary structure similar to our JSON based mediainfo
+    #    {
+    #      "video": [ { ...track1... }, { ...track2... }, ... ],
+    #      "audio": [ { ... }, ... ],
+    #      "text":  [ { ... }, ... ]
+    #    }
+    # Only the relevant lines are extracted (ignoring General for example).
+
+    lines = mi_data.splitlines()
+    sections = []
+    current_section_name = None
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            # Empty line => end current section
+            current_section_name = None
+            continue
+
+        if ':' not in line:
+        # No colon = this is a new section header (e.g. "General", "Video #1", etc.)
+            current_section_name = line
+            sections.append((current_section_name, {}))
+            continue
+
+        # Otherwise, it's a key:value line
+        key_part, val_part = line.split(':', 1)
+        key = key_part.strip()
+        val = val_part.strip()
+
+        if sections and current_section_name:
+            sec_dict = sections[-1][1]
+            if key not in sec_dict:
+                sec_dict[key] = []
+            sec_dict[key].append(val)
+
+    mi_struct = {"video": [], "audio": [], "text": []}
+
+    # Go through each section, transform into "video", "audio", or "text" track info
+    for (sec_name, kv_map) in sections:
+        sec_type = normalized_section_name(sec_name)
+        if sec_type == 'other':
+            # For example 'General' or if unknown => skip
+            continue
+
+        track_info = {}
+        if sec_type == 'video':
+            # Combine format info: Encoded_Library_Name, Format profile, Format
+            encode_lib = first_val(kv_map, "Encoded_Library_Name")
+            format_profile = first_val(kv_map, "Format profile")
+            fmt = first_val(kv_map, "Format")
+            parts = [p for p in [encode_lib, format_profile, fmt] if p]
+            track_info["format"] = " ".join(parts)  # e.g "x265 Main 10@L5.1@High HEVC"
+
+            # resolution = "Width x Height" (strip non-digits if any, rare)
+            w = first_val(kv_map, "Width")
+            h = first_val(kv_map, "Height")
+            w_clean = ''.join(ch for ch in w if ch.isdigit())
+            h_clean = ''.join(ch for ch in h if ch.isdigit())
+            track_info["resolution"] = f"{w_clean}x{h_clean}" if (w_clean and h_clean) else ""
+
+            # bit rate = numeric string only
+            br = first_val(kv_map, "Bit rate")
+            br_clean = ''.join(ch for ch in br if ch.isdigit())
+            track_info["bitrate"] = br_clean
+
+            # bit rate mode
+            track_info["bitrate_mode"] = first_val(kv_map, "Bit rate mode")
+
+            # pick "x h x min" style from all Durations if found
+            all_durations = kv_map.get("Duration", [])
+            pretty_dur = ""
+            for d_line in all_durations:
+                if " h " in d_line:
+                    pretty_dur = d_line
+                    break
+            if not pretty_dur and all_durations:
+                pretty_dur = all_durations[0]
+            track_info["duration"] = "0"  # numeric placeholder if you want
+            track_info["duration_pretty"] = pretty_dur
+
+            mi_struct["video"].append(track_info)
+
+        elif sec_type == 'audio':
+            comm_name = first_val(kv_map, "Commercial name")
+            # override the long name if required, as per override_commercial_name variable below config options
+            comm_name = override_commercial_name(comm_name)
+            track_info["format"] = comm_name if comm_name else first_val(kv_map, "Format")
+
+            # channels 
+            chans = ""
+            for c_line in kv_map.get("Channel(s)", []):
+                if "channel" in c_line.lower():
+                    chans = c_line
+                    break
+            track_info["channels"] = chans
+
+            # BitRate
+            br = first_val(kv_map, "Bit rate")
+            br_clean = ''.join(ch for ch in br if ch.isdigit())
+            track_info["BitRate"] = br_clean
+
+            # bit rate mode
+            track_info["bitrate_mode"] = first_val(kv_map, "Bit rate mode")
+
+            # language = first instance since we are not proving a complete mediainfo experience on the sidebar....
+            track_info["language"] = first_val(kv_map, "Language")
+            mi_struct["audio"].append(track_info)
+
+        elif sec_type == 'text':
+            track_info["format"]   = first_val(kv_map, "Format")
+            track_info["title"]    = first_val(kv_map, "Title")
+            track_info["language"] = first_val(kv_map, "Language")
+
+            mi_struct["text"].append(track_info)
+
+    return mi_struct
+
+
 # Finally, a way to check on when your LetsEncrypt expires
 # We have this mostly for the new status endpoint to handle recycling of the daemon externally if required
 def get_ssl_expiry_date(cert_path):
@@ -555,102 +708,127 @@ async def serve_image(request, filename):
 
     # Load mediainfo JSON info for sidebar if applicable
     mediainfo = []
+    saved_mi_paths = load_mi_metadata(filename)
     mediainfo_rendering = ''
+
+    # Load existing mediainfo JSON, if it exists)
     if os.path.exists(mediainfo_path):
         import json as pjson
         with open(mediainfo_path, 'r') as f:
-            mediainfo = pjson.load(f)
+            mediainfo = pjson.load(f)  #note: [ { 'video': [...], 'audio': [...], 'text': [...] } ]
 
-        mediainfo_lines = []
-        if mediainfo and len(mediainfo) > 0:
+    # Now handle the override logic
+    video_tracks = []
+    audio_tracks = []
+    text_tracks = []
+
+    if mi_json_override and saved_mi_paths:
+        # If we have at least one .mi file, parse it
+        first_mi_file_path = saved_mi_paths[0]['mi_data_path']
+        if first_mi_file_path and os.path.exists(first_mi_file_path):
+            with open(first_mi_file_path, 'r') as f:
+                raw_mi_data = f.read()
+            parsed_mi_struct = parse_mediainfo_file(raw_mi_data)
+
+            video_tracks = parsed_mi_struct.get('video', [])
+            audio_tracks = parsed_mi_struct.get('audio', [])
+            text_tracks  = parsed_mi_struct.get('text', [])
+        else:
+            # fallback to our JSON approach if the .mi file is missing
+            if mediainfo:
+                video_tracks = mediainfo[0].get('video', [])
+                audio_tracks = mediainfo[0].get('audio', [])
+                text_tracks  = mediainfo[0].get('text', [])
+    else:
+        # If override is false or no .mi files = use JSON approach
+        if mediainfo:
             video_tracks = mediainfo[0].get('video', [])
             audio_tracks = mediainfo[0].get('audio', [])
-            text_tracks = mediainfo[0].get('text', [])
-            # Check video data
-            for v in video_tracks:
-                 format = v.get('format', '')
-                 profile = v.get('profile', '')
-                 level = v.get('level', '')
-                 resolution = v.get('resolution', '')
-                 bitrate_str = v.get('bitrate', '0')
-                 duration_seconds_str = v.get('duration','0')
-                 encode_library_name = v.get('encode_library_name','')
-                 
-                 # Format human readable bitrate
-                 try:
-                    bitrate_int = int(bitrate_str)
-                    # Convert to kb/s
-                    bitrate_kb = round(bitrate_int / 1000)
-                    bitrate_formatted = f"{bitrate_kb} kb/s Bitrate"
-                 except ValueError:
-                     bitrate_formatted = ''
-                 # Format duration
-                 try:
-                    duration_seconds = float(duration_seconds_str)
-                    duration_minutes = duration_seconds / 60
-                    duration_formatted = f"{duration_minutes:.2f}"  # 2 decimal places
-                 except ValueError:
-                    duration_formatted = ''
+            text_tracks  = mediainfo[0].get('text', [])
 
-                 # Combine format, encode library, profile, and level into one line that will be the first.
-                 combined_info = format
-                 if encode_library_name or profile or level:
-                     combined_parts = [part for part in [encode_library_name, profile, level] if part] # filter out empty strings
-                     combined_info += f" - {' '.join(combined_parts)}"
-                 
-                 mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {combined_info.strip()}</div>')
+    mediainfo_lines = []
 
-                 if resolution:
-                    mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {resolution}</div>')
-                 if bitrate_formatted:
-                    mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {bitrate_formatted}</div>')
-            # Check audio data
-            for a in audio_tracks:
-                 format = a.get('format', '')
-                 channels = a.get('channels', '')
-                 bitrate_str = a.get('BitRate', '0')
-                 language = a.get('language', '')
-                
-                 #Format human readable bitrate
-                 try:
-                    bitrate_int = int(bitrate_str)
-                    # Convert to kb/s
-                    bitrate_kb = round(bitrate_int / 1000)
-                    bitrate_formatted = f"{bitrate_kb} kb/s Bitrate"
-                 except ValueError:
-                     bitrate_formatted = ''
-                
-                 if format and channels and language:
-                     mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="speaker.svg")}" class="icon"> {format} {channels} Channels<i>&nbsp;{language}</i></div>')
-                 elif format and channels:
-                      mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="speaker.svg")}" class="icon"> {format} {channels} Channels</div>')
+    # Video
+    if video_tracks:
+        v = video_tracks[0]
+        combined_info = v.get('format','')  
+        if combined_info:
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {combined_info}</div>')
+        
+        resolution = v.get('resolution','')
+        if resolution:
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {resolution}</div>')
+        
+        bitrate_str = v.get('bitrate','0')
+        try:
+            bitrate_int = int(bitrate_str)
+            bitrate_kb = round(bitrate_int / 1000)
+            bitrate_formatted = f"{bitrate_kb} kb/s Bitrate"
+        except ValueError:
+            bitrate_formatted = ''
+        if bitrate_formatted:
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {bitrate_formatted}</div>')
 
-                 if bitrate_formatted:
-                    mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="speaker.svg")}" class="icon"> {a.get("bitrate_mode","")} {bitrate_formatted}</div>'.strip()) # remove extra space if we dont have bitrate mode. 
-            # Check subtitle data
-            for t in text_tracks:
-                 format = t.get('format', '')
-                 title = t.get('title', '')
-                 language = t.get('language', '')
+        pretty_duration = v.get('duration_pretty','')
+        if pretty_duration:
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="video.svg")}" class="icon"> {pretty_duration}</div>')
 
-                 if format and title and language:
-                      mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="subs.svg")}" class="icon"> {format}&nbsp;<i>{title}&nbsp;</i> <i>{language}</i></div>')
-                 elif format and title:
-                     mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="subs.svg")}" class="icon"> {format}&nbsp;<i>{title}</i></div>')
+    # Audio
+    if audio_tracks:
+        a = audio_tracks[0]
+        fmt = a.get('format','')
+        chans = a.get('channels','')
+        if fmt and chans:
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="speaker.svg")}" class="icon"> {fmt} {chans}</div>')
+        elif fmt:
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="speaker.svg")}" class="icon"> {fmt}</div>')
 
+        # bitrate
+        br_str = a.get('BitRate','0')
+        try:
+            br_int = int(br_str)
+            br_kb  = round(br_int / 1000)
+            br_formatted = f"{br_kb} kb/s"
+        except ValueError:
+            br_formatted = ''
 
-        mediainfo_rendering =  '\n'.join(mediainfo_lines)
+        br_mode = a.get('bitrate_mode','')
+        if br_formatted:
+            line_str = br_formatted
+            if br_mode:
+                line_str += f' {br_mode}'
+            # Language
+            lang = a.get('language','')
+            if lang:
+                line_str += f' <i>&nbsp;{lang}</i>'
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="speaker.svg")}" class="icon"> {line_str}</div>')
+
+    # Text/Subtitles
+    for t in text_tracks:
+        fmt   = t.get('format','')
+        title = t.get('title','')
+        lang  = t.get('language','')
+        line_str = fmt
+        if title:
+            line_str += f' {title}'
+        if lang:
+            line_str += f' <i>&nbsp;{lang}</i>'
+        if line_str.strip():
+            mediainfo_lines.append(f'<div><img src="{app.url_for("serve_svg_icons", filename="subs.svg")}" class="icon"> {line_str}</div>')
+
+    mediainfo_rendering = '\n'.join(mediainfo_lines)
     
     mediainfo_info = f'<h6>Mediainfo</h6>\n{mediainfo_rendering}' if mediainfo_rendering else ''
 
 
-    # Load MI FILES metadata for display, if applicable
-    saved_mi_paths = load_mi_metadata(filename)
+    # Load mediainfo files to display in the main window, if there are any...
+ #   saved_mi_paths = load_mi_metadata(filename)
     mi_renderings = ''
     for mi in saved_mi_paths:
         mi_filename = mi['miname']
         mi_path = mi['mipath']
         mi_hexdig = mi['mi_hexdig']
+        mitruncated = mi.get('mitruncated', False)  
 
         # mi_badges logic
         mi_data_path = f"static/{mi_hexdig}.mi"
@@ -673,7 +851,7 @@ async def serve_image(request, filename):
         if mi_download_button:
             mi_badges += mi_download_button
 
-        # Add the SFV path badge if it exists
+        # Add the MI path badge if it exists
         if mi_path:
             mi_badges += f'''
                 <span class="badge" style="background-color: rgba({badge_color}, var(--bs-bg-opacity, 1)) !important;">{mi_path}</span>
@@ -682,7 +860,15 @@ async def serve_image(request, filename):
         # Add the MI filename badge
         mi_badges += f'''
             <span class="badge" style="background-color: rgba({badge_color}, var(--bs-bg-opacity, 1)) !important;">{mi_filename}</span>
-        </div>
+        '''
+        # flag our truncated mediainfo files
+        if mitruncated:
+            mi_badges += f'''
+                <span class="badge" style="background-color: rgba({warning_badge_color}, var(--bs-bg-opacity, 1)) !important;" data-toggle="tooltip" title="{truncated_mi_text}">Truncated</span>
+            '''
+
+        mi_badges += '''
+            </div>
         '''
     
         # Read the mi data for the codeblock
@@ -739,13 +925,13 @@ async def serve_image(request, filename):
     # Download all button logic
     download_all_button = ""
     if os.path.exists(nfo_data_path):
-       download_all_url = app.url_for('download_all', filename=filename)
-       download_all_button = f'''
-        <div style="border-left: 1px solid #555; height: 100%; margin-right: 10px;"></div>
-           <a href="{download_all_url}" id = "allDownloadButton" class="btn btn-sm download-button align-icon-center" style="align-self: center; width: 1.5em; height: 1.5em; display: flex; justify-content: center; align-items: center; padding: 0;">
-               <img src="{app.url_for('serve_svg_icons', filename='package.svg')}" class="icon" alt="Download Package">
-           </a>
-       '''
+        download_all_url = app.url_for('download_all', filename=filename)
+        download_all_button = f'''
+            <div class="btn-download-container"><div class="download-divider"></div>
+            <a href="{download_all_url}" id="allDownloadButton" class="btn btn-sm download-button align-icon-center" data-toggle="tooltip" data-delay=500 data-placement="left" title="{download_all_text}">
+            <img src="{app.url_for('serve_svg_icons', filename='package.svg')}" class="icon" alt="Download Package">
+            </a></div>
+        '''
 
     # Continue constructing the html template
     template = template_env.from_string('''
@@ -786,7 +972,7 @@ async def serve_image(request, filename):
                     margin-left: 300px;
                     padding-left: 20px;
                     padding-top: 56px;
-                    max-height: calc(100vh); /* Uncomment this if you want the horizontal scrollbar to appear at the bottom of the window rather than bottom of the data */
+                    max-height: calc(100vh) /* Uncomment this if you want the horizontal scrollbar to appear at the bottom of the window rather than bottom of the data */
                     overflow: auto; 
                     overflow-x: overlay; /* Match document scrollbar behavior */
                 }
@@ -889,7 +1075,28 @@ async def serve_image(request, filename):
                     /* The following kinda look nice, optionally uncomment both :)*/
                     /*border-left: 4px solid #7ea9ff;*/
                     /*color: #f8f9fa;*/
+                }
+                /* This will shift all left tooltips a bit further to the left so they are not RIGHT on the object */
+                .tooltip.bs-tooltip-left {
+                    margin-right: 20px;
+                }
+                .download-divider {
+                    border-left: 1px solid #555;
+                    height: 40px; /* Match the button's height */
+                    margin-right: 5px;
+                    transition: background-color 0.3s ease;
+                }
+                .btn-download-container {
+                display: flex;
+                align-items: center;
+                margin-right: -15px; 
+                transition: background-color 0.3s ease;
                 }                                        
+                .btn-download-container:hover{
+                    background-color: rgb({{ badge_color }});
+                    margin-right: -15px;
+                } 
+
                                     
             </style>
         </head>
@@ -925,6 +1132,9 @@ async def serve_image(request, filename):
            
             <script>
               document.addEventListener('DOMContentLoaded', function() {
+                $(function () {
+                $('[data-toggle="tooltip"]').tooltip()
+                });                                        
                 const truncationCache = new Map(); // Cache to store bestLength per max_em_width
                 const minLength = 5;
                 const maxLength = 32; // Maximum length of characters before truncation 
