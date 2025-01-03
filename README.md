@@ -91,7 +91,7 @@ Once done you should either copy the files to a folder accessable by this daemon
         "sfvpath": ""  **OPTIONAL**
       }
     ],
-	"mediainfo": [    **OPTIONAL**
+	"mediainfo": [    **OPTIONAL JSON if you have another source than mediainfo files**
 	{
 		"video": [ **REQUIRED (at least 1 track)**
 		{
@@ -148,9 +148,10 @@ Once done you should either copy the files to a folder accessable by this daemon
 |**miname**  | STRING    | mediainfo original filename                                           |
 |**mipath**  | STRING    | Path to mediainfo file in case more than one, oldschool video...      |
 
-#### Optional Mediainfo section
+#### Optional Mediainfo JSON section
 ##### This is seperate to the mediainfo blob, and is used only to show extra details on the sidebar if desired.
 If the mediainfo array is present then it must contain at least 1 video track, everything else is optional. All fields however are optional
+If you dont care about mediainfo OR you have actual .mediainfo files then you can ignore this and use the built-in parser
 | VIDEO                   | Type     | Description                                                            |
 | :---------------------- | :------: | :--------------------------------------------------------------------- |
 |**format**               | STRING   | Video format, E.G: HEVC                                                |
@@ -216,6 +217,8 @@ The example provided is the Darkly theme from https://bootswatch.com
 Ensure you keep the javascript files in the themes folder as this ensures that bootstrap operates entirely locally to the daemon with no external linking.
 
 Obviously you'll need a dark theme to keep in line with the white-on-black NFO rendering.
+
+My recommendation is to use the template this comes with and adjust the config options to create a color set you prefer.
 
 ##### Important Note
 Bootstrap themes often link to external fonts, usually something like `https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap`
