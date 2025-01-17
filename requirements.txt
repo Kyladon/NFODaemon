@@ -1,2 +1,3 @@
 Pillow
-Flask
+Sanic
+jinja2
